@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deal or No Deal</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "./vendor/three/three.module.min.js",
+        "three/addons/": "./vendor/three/addons/"
+    } }
+  </script>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="ui">
+    <header class="topbar">
+      <div class="brand">DEAL <span>or no</span> DEAL</div>
+      <div class="status" id="status">Loading…</div>
+      <div class="mine">Your case <b id="yourCase">–</b></div>
+    </header>
+
+    <div class="offers" id="offers"></div>
+
+    <aside class="ladder low" id="ladderLow"></aside>
+    <aside class="ladder high" id="ladderHigh"></aside>
+
+    <div class="reveal" id="reveal">
+      <div class="reveal-label" id="revealLabel"></div>
+      <div class="reveal-amount" id="revealAmount"></div>
+    </div>
+
+    <div class="calling" id="calling">
+      <div class="ring"></div>
+      <div class="calling-text">The banker is calling…</div>
+    </div>
+
+    <footer class="caption" id="caption">
+      <span class="who">Howie</span>
+      <span class="line" id="line"></span>
+    </footer>
+
+    <div class="keys" id="keys">6 or 7 for a surprise</div>
+  </div>
+
+  <div class="modal" id="modal" aria-live="polite">
+    <div class="card" id="card"></div>
+  </div>
+
+  <div id="spam" aria-hidden="true"></div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
