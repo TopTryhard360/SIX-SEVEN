@@ -2,7 +2,8 @@
 """Deal or No Deal: a desktop game using only the Python standard library.
 
 Run with:  python deal_or_no_deal.py
-Keys:      D = deal, N = no deal, K = keep, S = swap, R = play again
+Keys:      D = deal, N = no deal, K = keep, S = swap, R = play again,
+           6 or 7 = turn the 6 7 spam on or off
 """
 
 from __future__ import annotations
@@ -197,6 +198,11 @@ DIM_AMOUNT = 0.28
 GRID_ROWS = (6, 7, 7, 6)
 REVEAL_MS = 1200
 CALLING_MS = 1300
+SPAM_MS = 70
+SPAM_PER_TICK = 4
+SPAM_MAX = 140
+SPAM_COLORS = ("#ff3b6b", "#ffd60a", "#2ee6a6", "#3fa9ff", "#c77dff", "#ff8c1a", "#ffffff")
+SPAM_KEYS = {"6", "7", "kp_6", "kp_7"}
 
 
 class App:
@@ -209,6 +215,9 @@ class App:
         self.hover: str | None = None
         self.overlay: dict | None = None
         self.timer: str | None = None
+        self.spam: list[tuple[float, float, int, str, int]] = []
+        self.spam_ids: list[int] = []
+        self.spam_timer: str | None = None
         self.scale = 1.0
         self.dimmed = False
         self.ox = self.oy = 0.0
@@ -261,6 +270,47 @@ class App:
         self.hover = None
         self.draw()
 
+    # ----- 6 7 spam -----
+
+    def toggle_spam(self) -> None:
+        if self.spam_timer is None:
+            self.spam_tick()
+        else:
+            self.root.after_cancel(self.spam_timer)
+            self.spam_timer = None
+            self.spam = []
+        self.draw()
+
+    def spam_tick(self) -> None:
+        # Only add and remove the changed items. Redrawing the whole screen
+        # this often would make the game lag.
+        for _ in range(SPAM_PER_TICK):
+            item = (random.uniform(0, WIDTH), random.uniform(0, HEIGHT),
+                    random.randint(28, 96), random.choice(SPAM_COLORS),
+                    random.randint(-25, 25))
+            self.spam.append(item)
+            self.spam_ids.append(self.draw_spam_item(item))
+        extra = len(self.spam) - SPAM_MAX
+        if extra > 0:
+            self.canvas.delete(*self.spam_ids[:extra])
+            del self.spam[:extra], self.spam_ids[:extra]
+        self.canvas.tag_raise("spam_button")
+        self.spam_timer = self.root.after(SPAM_MS, self.spam_tick)
+
+    def draw_spam_item(self, item: tuple) -> int:
+        x, y, size, color, angle = item
+        return self.canvas.create_text(self.px(x), self.py(y), text="6 7", fill=color, angle=angle,
+                                       font=self.font(size, "bold"))
+
+    def draw_spam(self) -> None:
+        self.spam_ids = [self.draw_spam_item(item) for item in self.spam]
+        spamming = self.spam_timer is not None
+        self.button("spam", 1150, 18, 1256, 74, "STOP" if spamming else "6 7",
+                    RED if spamming else BLUE, RED_HOVER if spamming else BLUE_HOVER,
+                    self.toggle_spam, 24)
+        for item in self.canvas.find_all()[-2:]:  # The button's shape and label.
+            self.canvas.addtag_withtag("spam_button", item)
+
     # ----- input -----
 
     def _region_at(self, x: float, y: float):
@@ -277,17 +327,21 @@ class App:
             self.draw()
 
     def on_click(self, event: tk.Event) -> None:
-        if self.overlay and self.overlay["type"] == "reveal":
-            self.end_reveal()  # A click skips the reveal pause.
-            return
         region = self._region_at(event.x, event.y)
-        if region:
+        if region and region[4] == "spam":
+            region[5]()
+        elif self.overlay and self.overlay["type"] == "reveal":
+            self.end_reveal()  # A click skips the reveal pause.
+        elif region:
             region[5]()
 
     def on_key(self, event: tk.Event) -> None:
+        key = (event.keysym or "").lower()
+        if key in SPAM_KEYS:
+            self.toggle_spam()
+            return
         if self.overlay:
             return
-        key = (event.keysym or "").lower()
         game = self.game
         actions = {
             "offer": {"d": game.deal, "n": game.no_deal},
@@ -382,6 +436,7 @@ class App:
         self.draw_footer()
         self.dimmed = False
         self.draw_dialog()
+        self.draw_spam()
 
         ids = {region[4] for region in self.regions}
         canvas.config(cursor="hand2" if self.hover in ids else "")
